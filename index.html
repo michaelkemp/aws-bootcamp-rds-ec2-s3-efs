@@ -4,6 +4,7 @@
 <title>AWS LAMP</title>
 </head>
 <link href="http://fonts.googleapis.com/css?family=Roboto" rel="stylesheet">
+<link rel="stylesheet" href="http://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
 <style>
     body {
         font-family: 'Roboto', sans-serif;
@@ -24,8 +25,8 @@
         list-style-position: inside;
     }
     .toc li {
-    	font-size:1.4em;
-    	list-style: none;
+        font-size:1.4em;
+        list-style: none;
     }
     .cntr {
         text-align:center;
@@ -37,54 +38,55 @@
         background-color: #FF9;
     }
     code {
-    	font-family: monospace; 
+        font-family: monospace; 
         font-size: 1em;
         white-space: pre;
     }
     .codediv {
-    	padding: 10px;
-    	background-color: #ddd;
-    	margin: 0 65px;
-    	width: 750px;
-    	display: block;
-    	border: 1px solid black;
+        padding: 10px;
+        background-color: #ddd;
+        margin: 0 65px;
+        width: 750px;
+        display: block;
+        border: 1px solid black;
     }
     a, a:visited {
-    	text-decoration: none;
-    	color:#369;
+        text-decoration: none;
+        color:#369;
     }
 </style>
 <body>
 
 
-<h1 class='cntr'>AWS RDS, EC2, S3, EFS</h1>
+<h1 class='cntr'>AWS LAMP with IAM, RDS, EC2, S3, EFS, and AMI</h1>
 
-<h2 id="contents">Contents</h2>	
-	<ul class="toc">
-		<li><a href="#introduction">Introduction</a></li>
-		<li><a href="#glossary">Glossary</a></li>
-		<li><a href="#step1">Create Security Groups in the Main VPC</a></li>
-		<li><a href="#step2">Create an EFS Mount in the Main VPC</a></li>
-		<li><a href="#step3">Create a Public S3 Bucket</a></li>
-		<li><a href="#step4">Create an IAM Role for EC2 to access S3</a></li>
-		<li><a href="#step5">Create a MySQL RDS Database</a></li>
-		<li><a href="#step6">Create EC2 Instances</a></li>
-		<li><a href="#step7">Configure EC2 Instances</a></li>
-	</ul>
+<h2 id="contents">Contents</h2> 
+    <ul class="toc">
+        <li><a href="#introduction">Introduction</a></li>
+        <li><a href="#glossary">Glossary</a></li>
+        <li><a href="#step1">Step 1. Create Security Groups in the Main VPC</a></li>
+        <li><a href="#step2">Step 2. Create an EFS Mount in the Main VPC</a></li>
+        <li><a href="#step3">Step 3. Create a Public S3 Bucket</a></li>
+        <li><a href="#step4">Step 4. Create an IAM Role for EC2 to access S3</a></li>
+        <li><a href="#step5">Step 5. Create a MySQL RDS Database</a></li>
+        <li><a href="#step6">Step 6. Create an EC2 Instance</a></li>
+        <li><a href="#step7">Step 7. Configure the EC2 Instance</a></li>
+        <li><a href="#step8">Step 8. Launch a new EC2 Instance from AMI</a></li>
+        <li><a href="#conclusion">Conclusion</a></li>
+    </ul>
 
 <br><br>
 <h2 id="introduction">Introduction</h2>
-	<p>This demonstration expands the typical LAMP (Linux, Apache, MySQL, PHP) Stack to use AWS features to increase redundancy and resiliency.</p>
-	<p>Although the code is relatively simple, the same mechanisms can be used for sites using CMS systems like Drupal or Wordpress.</p>
-	<p>When OIT provision an account in AWS, we create a <em>Main</em> VPC (virtual private cloud) divided into a number of subnets. We categorize those subnets as follows:
-		<ul>
-			<li>Public - resources placed in these subnets are accessible from the Internet.</li>
-			<li>Private - resources placed in these subnets have Internet access via NAT (network address translation) but are not visible from the Internet.</li>
-			<li>Data - resources placed in these subnets have no access to or from the Internet.</li>
-		</ul>
-		There is more than one of each category of subnet, as they are places in different availability zones (AZs), which is the AWS way of saying different data centers spread across different
-		geographical regions for increased redundancy.
-	</p>
+    <p>This demonstration expands the typical LAMP (Linux, Apache, MySQL, PHP) Stack to use AWS features to increase redundancy and resiliency.</p>
+    <p>Although the code in this example is relatively simple, the same mechanisms can be used for sites using CMS systems like Drupal or Wordpress.</p>
+    <p>When OIT provision an account in AWS, we create a <em>Main</em> VPC (virtual private cloud) divided into a number of subnets. We categorize those subnets as follows:
+        <ul>
+            <li>Public - resources placed in these subnets are accessible from the Internet.</li>
+            <li>Private - resources placed in these subnets have Internet access via NAT (network address translation) but are not visible from the Internet.</li>
+            <li>Data - resources placed in these subnets have no access to or from the Internet.</li>
+        </ul>
+        More than one subnet is created in each category, as they are placed in different availability zones (AZs). An Availability Zone is an AWS data center (or group of data centers) that is geographically isolated from other AZs in a Region for the purpose of redundancy.
+    </p>
 
 
 <br><br>
@@ -113,35 +115,32 @@
 
 <br><br>
 <h2 id="step1">Step 1. Create Security Groups in the Main VPC</h2>
-    <p>In order for traffic to reach our resources, we need to create security groups that permit that traffic. As we will be placing all of our resources in the Main VPC, we need to make sure we create them in the correct VPC so they are 
-    available for us to use.
-	</p>
+    <p>In order for traffic to reach our resources, we need to create two security groups. (<i class="fas fa-exclamation-triangle"></i> We are placing our resources in the Main VPC, make sure when creating your Security Groups they are also created in the Main VPC)
+    </p>
     <ol>
-        <li>Create Security Group with port 22 [ssh] access from BYU and port 80 [http] access from the world.
+        <li>Create Security Group with port 22 [SSH] access from BYU and port 80 [HTTP] access from anywhere.
             <br><a href='sg-01.png'><img src='sg-01.png'></a>
         </li>
-        <li>Create Self Referencing Security Group with port 3306 [mysql] and port 2049 [nfs] access
+        <li>Create Self Referencing Security Group with port 3306 [MYSQL/Aurora] and port 2049 [NFS] access.
             <br><a href='sg-02.png'><img src='sg-02.png'></a>
         </li>
     </ol>
 
-
 <br><br>
 <h2 id="step2">Step 2. Create an EFS Mount in the Main VPC</h2>
-	<p>EFS is a Network File System (NFS) that we can attach to as many virtual machines (EC2 instances) as we need. This will enable all of our EC2 instances to operate off of the same code base.</p>
-	<p>Create the EFS in the same subnets as the EC2 instances that will use it - in our case, the two Public subnets.</p>
-	<p>Attach the self referencing Security Group. (we will also attach this group to our EC2 instances to allow them access to the EFS)</p>
+    <p>EFS is a Network File System (NFS) that we can attach to as many virtual machines (EC2 instances) as we need. This will enable all of our EC2 instances to operate off of the same code base.</p>
+    <p>Create the EFS in the same subnets as the EC2 instances that will use it - in our case, the two Public subnets.</p>
+    <p>Attach the Self Referencing Security Group. (<i class="fas fa-exclamation-triangle"></i> We will also attach this group to our EC2 instances to allow them access to the EFS)</p>
     <a href='efs-01.png'><img src='efs-01.png'></a>
-    
 
 <br><br>
 <h2 id="step3">Step 3. Create a Public S3 Bucket</h2>
     <p>Our code will take uploaded files, store them, and reference them from an S3 Bucket.</p>
     <ol>
-        <li>Create an S3 Bucket named <em>kempy-bootcamp-bucket</em> (the name must be unique throughout all AWS)
+        <li>Create an S3 Bucket named <em>kempy-bootcamp-bucket</em> (<i class="fas fa-exclamation-triangle"></i> S3 Bucket names must be unique throughout all AWS)
             <br><a href='s3-01.png'><img src='s3-01.png'></a>
         </li>
-        <li>Turn off the Public blocks (we want it to be a Public Bucket)
+        <li>Turn off the Public blocks (<i class="fas fa-exclamation-triangle"></i> We need it to be a Public Bucket)
             <br><a href='s3-02.png'><img src='s3-02.png'></a>
         </li>
         <li>Add a public read access policy
@@ -149,21 +148,21 @@
         </li>
     </ol>
     <div class='codediv'>
-	    <code>
-	{
-	  "Version":"2012-10-17",
-	  "Statement":[
-	    {
-	      "Sid":"AddPerm",
-	      "Effect":"Allow",
-	      "Principal": "*",
-	      "Action":["s3:GetObject"],
-	      "Resource":["arn:aws:s3:::kempy-bootcamp-bucket/*"]
-	    }
-	  ]
-	}
-	    </code>
-	</div>
+        <code>
+    {
+      "Version":"2012-10-17",
+      "Statement":[
+        {
+          "Sid":"AddPerm",
+          "Effect":"Allow",
+          "Principal": "*",
+          "Action":["s3:GetObject"],
+          "Resource":["arn:aws:s3:::kempy-bootcamp-bucket/*"]
+        }
+      ]
+    }
+        </code>
+    </div>
 
 
 <br><br>
@@ -179,23 +178,23 @@
         </li>
     </ol>
     <div class='codediv'>
-	    <code>
-	{
-	    "Version": "2012-10-17",
-	    "Statement": [
-	        {
-	            "Sid": "VisualEditor0",
-	            "Effect": "Allow",
-	            "Action": "s3:*",
-	            "Resource": [
-	                "arn:aws:s3:::kempy-bootcamp-bucket/*",
-	                "arn:aws:s3:::kempy-bootcamp-bucket"
-	            ]
-	        }
-	    ]
-	}
-	    </code>
-	</div>
+        <code>
+    {
+        "Version": "2012-10-17",
+        "Statement": [
+            {
+                "Sid": "VisualEditor0",
+                "Effect": "Allow",
+                "Action": "s3:*",
+                "Resource": [
+                    "arn:aws:s3:::kempy-bootcamp-bucket/*",
+                    "arn:aws:s3:::kempy-bootcamp-bucket"
+                ]
+            }
+        ]
+    }
+        </code>
+    </div>
 
 
 <br><br>
@@ -208,21 +207,22 @@
         <li>Name the DB Instance and create a master username and password
             <br><a href='rds-02.png'><img src='rds-02.png'></a>
         </li>
-        <li>Put it in the Main VPC in the main-db-subnet-group. Attach the self referencing Security Group. (There is no need to add a database at this stage as we will connect to our DB instance from our EC2 instance and add the database and database table then.)
+        <li>Place our DB Instance in the Main VPC in the main-db-subnet-group. Attach the self referencing Security Group.
             <br><a href='rds-03.png'><img src='rds-03.png'></a>
         </li>
-        <li>Once the instance is created, note the instance end-point. [ kempy-mysql.crzc9xds3qkq.us-west-2.rds.amazonaws.com ]
+        <li>Once the instance is created, take note of the instance end-point. [ kempy-mysql.crzc9xds3qkq.us-west-2.rds.amazonaws.com ]
             <br><a href='rds-04.png'><img src='rds-04.png'></a>
         </li>
     </ol>
 
     
 <br><br>
-<h2 id="step6">Step 6. Create EC2 Instances</h2>
-	<p>I came across a few gotchas when creating the EC2 instance, mainly due to the AWS PHP SDK (the code used by PHP to connect with AWS resources via their API). The most up to date SDK (with the best documentation) requires at least PHP 5.5. The first AMI (Amazon Machine Images) I used to install my EC2 instance only have PHP 5.4.</p>
+<h2 id="step6">Step 6. Create an EC2 Instance</h2>
+    <p><i class="fas fa-exclamation-triangle"></i> I came across a few gotchas when creating the EC2 instance; mainly due to the AWS PHP SDK (the code used by PHP to connect with AWS resources via their API).
+    <br>The most up-to-date SDK requires at least PHP 5.5, but the first AMI (Amazon Machine Images) I used defaulted to PHP 5.4.</p>
 
     <ol>
-        <li>Launch an EC2 Instance [Amazon Linux AMI 2018.03.0 (HVM), SSD Volume Type - ami-01e24be29428c15b2 ]
+        <li>Launch an EC2 Instance (from a PHP 5.5 compatible AMI) [Amazon Linux AMI 2018.03.0 (HVM), SSD Volume Type - ami-01e24be29428c15b2]
             <br><a href='ec2-01.png'><img src='ec2-01.png'></a>
         </li>
         <li>Add it to a Public Subnet in the Main VPC
@@ -243,13 +243,13 @@
 
    
 <br><br>
-<h2 id="step7">Configure EC2 Instances</h2>
-	
+<h2 id="step7">Configure the EC2 Instance</h2>
+    
     <ol>
-        <li>Update and Install Software - Apache (httpd), PHP 5.5, MySQL (to access our database) 
+        <li>Update the instance and Install the required software - Apache (httpd), PHP 5.5, MySQL (to access our database) 
             <br><br>
     <div class='codediv'>
-	    <code>
+        <code>
 sudo yum update -y 
 
 sudo yum -y install httpd24
@@ -258,16 +258,16 @@ sudo yum -y install mysql
 
 sudo chkconfig httpd on
 sudo service httpd start
-	    </code>
-	</div>
+        </code>
+    </div>
 
 
         </li>
-        <li>Connect to MySQL RDS Instance and configure database and database user 
+        <li>Connect to MySQL RDS Instance and create a database, database user, and a table for our application. 
             <br><a href='config-mysql.png'><img src='config-mysql.png'></a>
             <br><br>
     <div class='codediv'>
-	    <code>
+        <code>
 mysql -h kempy-mysql.crzc9xds3qkq.us-west-2.rds.amazonaws.com -u iamgroot -p
 
 CREATE DATABASE mydb;
@@ -286,70 +286,107 @@ CREATE TABLE mydb.images (
   description varchar(2048) DEFAULT NULL,
   PRIMARY KEY (id)
 );
-	    </code>
-	</div>
+        </code>
+    </div>
 
         </li>
-        <li>Add ec2-user to a web group and set web directory settings
-        	<br><br>
+        <li>Create a new group and add the ec2-user user to it. Change the ownership of the web (/var/www) directory.
+            <br><br>
     <div class='codediv'>
-	    <code>
+        <code>
 sudo groupadd web
 sudo usermod -a -G web ec2-user
 
 sudo chown -R apache:web /var/www
 sudo find /var/www -type d -exec chmod u=rwx,g=rwxs,o=xr '{}' \;
 sudo find /var/www -type f -exec chmod u=rw,g=rw,o=r '{}' \;
-	    </code>
-	</div>
+        </code>
+    </div>
         </li>
         <li>Mount the EFS file system at the web root /var/www/html
-        	<br><br>
+            <br><br>
     <div class='codediv'>
-	    <code>
+        <code>
 sudo yum install -y amazon-efs-utils
 sudo mount -t efs fs-7a0022d2:/ /var/www/html
 
+#Add the mount to the fstab to allow persistence on reboots
 sudo vim /etc/fstab
     #Add the following line to the fstab  
     fs-7a0022d2:/ /var/www/html efs defaults,_netdev 0 0
-	    </code>
-	</div>
+        </code>
+    </div>
         </li>
-        <li>Add Composer to install the AWS SDK PHP
-        	<br><a href='composer.png'><img src='composer.png'></a>
-        	<br><br>
+        <li>Install Composer, and use it to install the AWS SDK PHP
+            <br><a href='composer.png'><img src='composer.png'></a>
+            <br><br>
     <div class='codediv'>
-	    <code>
+        <code>
 cd ~
 curl -sS https://getcomposer.org/installer | php
 sudo mv composer.phar /usr/local/bin/composer
 
 cd /var/www/html
 /usr/local/bin/composer require aws/aws-sdk-php
-	    </code>
-	</div>
+        </code>
+    </div>
         </li>
-        <li>Allow for bigger file uploads in the php.ini
-       	<br><br>
+        <li>Edit the php.ini file to allow for bigger file uploads
+        <br><br>
     <div class='codediv'>
-	    <code>
+        <code>
 sudo vim /etc/php.ini
-	# Edit the following lines
-	upload_max_filesize = 32M
-	post_max_size = 32M
+    # Edit the following lines
+    upload_max_filesize = 32M
+    post_max_size = 32M
 
 sudo service httpd restart
-	    </code>
-	</div>
+        </code>
+    </div>
 
         </li>
-        <li>Create an Images directory in /var/www/html and upload <em>index.php</em> and <em>upload.php</em>
-       	<br><a href='dir.png'><img src='dir.png'></a>
+        <li>Upload 
+            <em><a href='https://github.com/michaelkemp/aws-bootcamp-rds-ec2-s3-efs/blob/master/index.php'>index.php</a></em> and 
+            <em><a href='https://github.com/michaelkemp/aws-bootcamp-rds-ec2-s3-efs/blob/master/upload.php'>upload.php</a></em>
+            to the /var/www/html diectory. Create an 'images' folder as a temporary storage location for the images we upload. 
+        <br><a href='dir.png'><img src='dir.png'></a>
         </li>
-        <li>Test at <a href='http://ec2-34-217-206-91.us-west-2.compute.amazonaws.com/'>http://ec2-34-217-206-91.us-west-2.compute.amazonaws.com/</a>
+        <li>Test at <a href='http://ec2-34-217-206-91.us-west-2.compute.amazonaws.com/'>http://ec2-34-217-206-91.us-west-2.compute.amazonaws.com/</a> 
+            (<i class="fas fa-exclamation-triangle"></i> will be deleted after the Bootcamp)
         </li>
      </ol>   
 
+<br><br>
+<h2 id="step8">Step 8. Launch a new EC2 Instance from AMI</h2>
+    <p>Now we have an EC2 Instance set up the way we want it, we can use it to create duplicates.</p>
+
+    <ol>
+        <li>Create an Image from our EC2 Instance
+            <br><a href='image-01.png'><img src='image-01.png'></a>
+        </li>
+        <li>Give it a name
+            <br><a href='image-02.png'><img src='image-02.png'></a>
+        </li>
+        <li>Launch a new EC2 Instance from the AMI we just created
+            <br><a href='image-03.png'><img src='image-03.png'></a>
+        </li>
+        <li>Add it to the Main VPC and Public Subnet. <i class="fas fa-exclamation-triangle"></i> Once the instance has initialized, add the self referencing Security Group and IAM Role.
+            <br><a href='image-04.png'><img src='image-04.png'></a>
+        </li>
+        <li>Test the new EC2 at <a href='http://ec2-52-12-15-153.us-west-2.compute.amazonaws.com/'>http://ec2-52-12-15-153.us-west-2.compute.amazonaws.com/</a>
+            (<i class="fas fa-exclamation-triangle"></i> will be deleted after the Bootcamp)
+        </li>
+    </ol>
+
+
+<br><br>
+<h2 id="conclusion">Conclusion</h2>
+    <p>In this example, we set up 2 EC2 instances in Public facing subnets. If we were to create this in a production environment, we could further protect our web servers by placing them in the Private subnet, and directing traffic to them via a Load Balancer in the public subnet.</p>
+    <p>In this way, the Load Balancer could monitor the health of our EC2 instances and redirect traffic as needed.</p>
+<br><br>
+
 </body>
 </html>
+
+
+
