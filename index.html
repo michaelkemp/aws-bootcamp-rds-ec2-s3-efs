@@ -85,7 +85,7 @@
             <li>Private - resources placed in these subnets have Internet access via NAT (network address translation) but are not visible from the Internet.</li>
             <li>Data - resources placed in these subnets have no access to or from the Internet.</li>
         </ul>
-        More than one subnet is created in each category, as they are placed in different availability zones (AZs). An Availability Zone is an AWS data center (or group of data centers) that is geographically isolated from other AZs in a Region for the purpose of redundancy.
+        More than one subnet is created in each category, and are placed in different availability zones (AZs). An Availability Zone is an AWS data center (or group of data centers) that is geographically isolated from other AZs in a Region.
     </p>
 
 
@@ -115,27 +115,30 @@
 
 <br><br>
 <h2 id="step1">Step 1. Create Security Groups in the Main VPC</h2>
-    <p>In order for traffic to reach our resources, we need to create two security groups. (<i class="fas fa-exclamation-triangle"></i> We are placing our resources in the Main VPC, make sure when creating your Security Groups they are also created in the Main VPC)
+    <p>In order for traffic to reach our resources, we need to create two security groups. (<i class="fas fa-exclamation-triangle"></i> We are placing our resources in the Main VPC; make sure when creating your Security Groups they are also created in the Main VPC)
     </p>
     <ol>
-        <li>Create Security Group with port 22 [SSH] access from BYU and port 80 [HTTP] access from anywhere.
+        <li>Create a Security Group with port 22 [SSH] access from BYU and port 80 [HTTP] access from anywhere.
             <br><a href='sg-01.png'><img src='sg-01.png'></a>
         </li>
-        <li>Create Self Referencing Security Group with port 3306 [MYSQL/Aurora] and port 2049 [NFS] access.
+        <li>Create a Self Referencing Security Group with port 3306 [MYSQL/Aurora] and port 2049 [NFS] access.
             <br><a href='sg-02.png'><img src='sg-02.png'></a>
         </li>
     </ol>
+    <p>Security Group inbound rules can be thought of as 1) <em>WHAT</em> are we giving access to, and 2) <em>WHO</em> are we giving that access to.</p>
+    <p>We will add the Self Referencing group to our EFS Mount and our DB Instance because they have the <em>WHAT</em>. 
+        We will add it to our EC2 instances to make them the <em>WHO</em>.</p>
 
 <br><br>
 <h2 id="step2">Step 2. Create an EFS Mount in the Main VPC</h2>
     <p>EFS is a Network File System (NFS) that we can attach to as many virtual machines (EC2 instances) as we need. This will enable all of our EC2 instances to operate off of the same code base.</p>
-    <p>Create the EFS in the same subnets as the EC2 instances that will use it - in our case, the two Public subnets.</p>
-    <p>Attach the Self Referencing Security Group. (<i class="fas fa-exclamation-triangle"></i> We will also attach this group to our EC2 instances to allow them access to the EFS)</p>
+    <p>Create the EFS in the same subnets as the EC2 instances that will use it. (<i class="fas fa-exclamation-triangle"></i> In our case, the two Public subnets)</p>
+    <p>Attach the Self Referencing Security Group.
     <a href='efs-01.png'><img src='efs-01.png'></a>
 
 <br><br>
 <h2 id="step3">Step 3. Create a Public S3 Bucket</h2>
-    <p>Our code will take uploaded files, store them, and reference them from an S3 Bucket.</p>
+    <p>Our code will take uploaded files and store them and reference them from an S3 Bucket.</p>
     <ol>
         <li>Create an S3 Bucket named <em>kempy-bootcamp-bucket</em> (<i class="fas fa-exclamation-triangle"></i> S3 Bucket names must be unique throughout all AWS)
             <br><a href='s3-01.png'><img src='s3-01.png'></a>
@@ -207,10 +210,10 @@
         <li>Name the DB Instance and create a master username and password
             <br><a href='rds-02.png'><img src='rds-02.png'></a>
         </li>
-        <li>Place our DB Instance in the Main VPC in the main-db-subnet-group. Attach the self referencing Security Group.
+        <li>Place our DB Instance in the Main VPC in the main-db-subnet-group. Attach the Self Referencing Security Group.
             <br><a href='rds-03.png'><img src='rds-03.png'></a>
         </li>
-        <li>Once the instance is created, take note of the instance end-point. [ kempy-mysql.crzc9xds3qkq.us-west-2.rds.amazonaws.com ]
+        <li>Once the instance is created, take note of the instance end-point. [kempy-mysql.crzc9xds3qkq.us-west-2.rds.amazonaws.com]
             <br><a href='rds-04.png'><img src='rds-04.png'></a>
         </li>
     </ol>
@@ -231,11 +234,11 @@
         <li>Add the Security Group we created earlier - we'll also need to attach the 2nd security group (the self referencing one) but can only attach one when we create the instance.
             <br><a href='ec2-03.png'><img src='ec2-03.png'></a>
         </li>
-        <li>Attach self referencing Security Group
+        <li>Attach the Self Referencing Security Group
             <br><a href='ec2-04.png'><img src='ec2-04.png'></a>
             <br><a href='ec2-05.png'><img src='ec2-05.png'></a>
         </li>
-        <li>Attach IAM Role
+        <li>Attach the IAM Role
             <br><a href='ec2-06.png'><img src='ec2-06.png'></a>
             <br><a href='ec2-07.png'><img src='ec2-07.png'></a>
         </li>
@@ -246,7 +249,7 @@
 <h2 id="step7">Configure the EC2 Instance</h2>
     
     <ol>
-        <li>Update the instance and Install the required software - Apache (httpd), PHP 5.5, MySQL (to access our database) 
+        <li>Update the instance and install the required software - Apache (httpd), PHP 5.5, MySQL (to access our database) 
             <br><br>
     <div class='codediv'>
         <code>
@@ -358,7 +361,7 @@ sudo service httpd restart
 
 <br><br>
 <h2 id="step8">Step 8. Launch a new EC2 Instance from AMI</h2>
-    <p>Now we have an EC2 Instance set up the way we want it, we can use it to create duplicates.</p>
+    <p>Now we have an EC2 Instance set up the way we want it, we can use it to create duplicates. This is a best practice for reducing mean time to recovery (MTTR).</p>
 
     <ol>
         <li>Create an Image from our EC2 Instance
@@ -370,7 +373,7 @@ sudo service httpd restart
         <li>Launch a new EC2 Instance from the AMI we just created
             <br><a href='image-03.png'><img src='image-03.png'></a>
         </li>
-        <li>Add it to the Main VPC and Public Subnet. <i class="fas fa-exclamation-triangle"></i> Once the instance has initialized, add the self referencing Security Group and IAM Role.
+        <li>Add it to the Main VPC and Public Subnet. <i class="fas fa-exclamation-triangle"></i> Once the instance has initialized, add the Self Referencing Security Group and IAM Role.
             <br><a href='image-04.png'><img src='image-04.png'></a>
         </li>
         <li>Test the new EC2 at <a href='http://ec2-52-12-15-153.us-west-2.compute.amazonaws.com/'>http://ec2-52-12-15-153.us-west-2.compute.amazonaws.com/</a>
