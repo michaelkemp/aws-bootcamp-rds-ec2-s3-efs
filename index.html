@@ -78,6 +78,22 @@
 <br><br>
 <h2 id="introduction">Introduction</h2>
     <p>This demonstration expands the typical LAMP (Linux, Apache, MySQL, PHP) Stack to use AWS features to increase redundancy and resiliency.</p>
+
+    <ul>
+        <li>
+            <b>EFS</b> --
+                All files and directories are redundantly stored within and across multiple Availability Zones in a region to prevent the loss of data from the failure of any single component. The distributed architecture of Amazon EFS provides data protection from an AZ outage, system and component failures, and network connection errors.
+        </li>
+        <li> 
+            <b>S3</b> --
+                Objects are redundantly stored on multiple devices across multiple facilities in an Amazon S3 region. Amazon S3 also regularly verifies the integrity of data stored using checksums. If Amazon S3 detects data corruption, it is repaired using redundant data. In addition, Amazon S3 calculates checksums on all network traffic to detect corruption of data packets when storing or retrieving data.
+        </li>
+        <li>
+            <b>RDS</b> --
+                Aurora automatically replicates your storage six ways, across three Availability Zones. Amazon Aurora storage is fault-tolerant, transparently handling the loss of up to two copies of data without affecting database write availability and up to three copies without affecting read availability. Amazon Aurora storage is also self-healing. Data blocks and disks are continuously scanned for errors and replaced automatically. If a storage volume on your primary instance fails in a Multi-AZ deployment, Amazon RDS automatically initiates a failover to the up-to-date standby (or to a replica in the case of Amazon Aurora).
+        </li>         
+    </ul>
+
     <p>Although the code in this example is relatively simple, the same mechanisms can be used for sites using CMS systems like Drupal or Wordpress.</p>
     <p>When OIT provision an account in AWS, we create a <em>Main</em> VPC (virtual private cloud) divided into a number of subnets. We categorize those subnets as follows:
         <ul>
